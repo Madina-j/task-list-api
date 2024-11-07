@@ -2,6 +2,8 @@ from flask import Blueprint, abort, make_response, request, Response
 from app.models.task import Task
 from datetime import datetime
 from ..db import db
+import requests
+import os
 
 tasks_bp = Blueprint("tasks_bp", __name__, url_prefix="/tasks")
 
@@ -123,15 +125,26 @@ def update_task_to_complete(task_id):
     task = validate_task(task_id)
     task.completed_at = datetime.now()
     db.session.commit()
+    token = os.environ.get('SLACK_API_TOKEN')
+    headers = {
+        "Authorization": f"Bearer {token}" 
+    }
+    url = "https://slack.com/api/chat.postMessage"
 
-    response_body = { "task": {
+    message = {"channel": "D07V10LPBM4",
+            "text": f"Someone just completed the task {task.title}"}
+
+    response = requests.post(url, headers=headers, data=message)
+    
+    print(response.text)
+    response = { "task": {
         "id": task.id,
         "title": task.title,
         "description": task.description,
         "is_complete": task.completed_at is not None
     }
     }
-    return response_body, 200
+    return response, 200
 
 @tasks_bp.patch("/<task_id>/mark_incomplete")
 def update_task_to_incomplete(task_id):
