@@ -18,7 +18,7 @@ def create_task():
     description = request_body["description"]
     completed_at= request_body.get("completed_at")
 
-    new_task = Task(title=title, description=description, completed_at= None if completed_at is None else datetime.fromisoformat(completed_at)
+    new_task = Task(title=title, description=description, completed_at= None if completed_at is None else datetime.datetime(completed_at)
     )
     db.session.add(new_task)
     db.session.commit()
@@ -117,3 +117,33 @@ def delete_task(task_id):
     }
     
     return response, 200
+
+@tasks_bp.patch("/<task_id>/mark_complete")
+def update_task_to_complete(task_id):
+    task = validate_task(task_id)
+    task.completed_at = datetime.now()
+    db.session.commit()
+
+    response_body = { "task": {
+        "id": task.id,
+        "title": task.title,
+        "description": task.description,
+        "is_complete": task.completed_at is not None
+    }
+    }
+    return response_body, 200
+
+@tasks_bp.patch("/<task_id>/mark_incomplete")
+def update_task_to_incomplete(task_id):
+    task = validate_task(task_id)
+    task.completed_at = None
+    db.session.commit()
+
+    response_body = { "task": {
+        "id": task.id,
+        "title": task.title,
+        "description": task.description,
+        "is_complete": task.completed_at is not None
+    }
+    }
+    return response_body, 200
