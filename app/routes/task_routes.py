@@ -1,16 +1,17 @@
 from flask import Blueprint, abort, make_response, request, Response
 from app.models.task import Task
+from app.models.goal import Goal
 from datetime import datetime
 from ..db import db
 import requests
 import os
+
 
 tasks_bp = Blueprint("tasks_bp", __name__, url_prefix="/tasks")
 
 @tasks_bp.post("")
 def create_task():
     request_body = request.get_json()
-
     if "title" not in request_body:
         return {"details": "Invalid data"}, 400
     if "description" not in request_body:
@@ -53,6 +54,7 @@ def get_all_tasks():
         tasks_response.append(
             {
                 "id": task.id,
+                # "goal_id": task.goal_id is not None,
                 "title": task.title,
                 "description": task.description,
                 "is_complete": task.completed_at is not None
@@ -64,13 +66,25 @@ def get_all_tasks():
 def get_one_task(task_id):
     task = validate_task(task_id)
 
-    return { "task" : {
-        "id": task.id,
-        "title": task.title,
-        "description": task.description,
-        "is_complete": task.completed_at is not None
-    }
-    }
+    if task.goal_id is not None:
+        return {
+            "task": {
+                "id": task.id,
+                "goal_id": task.goal_id,
+                "title": task.title,
+                "description": task.description,
+                "is_complete": task.completed_at is not None
+            }
+        }
+    else:
+        return {
+            "task": {
+                "id": task.id,
+                "title": task.title,
+                "description": task.description,
+                "is_complete": task.completed_at is not None
+            }
+        }
 
 def validate_task(task_id):
     try:
@@ -95,6 +109,7 @@ def update_task(task_id):
     task.title = request_body["title"]
     task.description = request_body["description"]
     task.completed_at= request_body.get("completed_at")
+    # task.goal_id= request_body.get("goal_id")
     db.session.commit()
 
 

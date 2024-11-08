@@ -1,7 +1,9 @@
 from flask import Blueprint, abort, make_response, request, Response
 from app.models.goal import Goal
+from app.models.task import Task
 from datetime import datetime
 from ..db import db
+from .task_routes import validate_task
 
 goals_bp = Blueprint("goals_bp", __name__, url_prefix="/goals")
 
@@ -97,3 +99,47 @@ def delete_goal(goal_id):
     }
     
     return response, 200
+
+
+
+@goals_bp.post("/<goal_id>/tasks")
+def create_task_with_goal(goal_id):
+    goal = validate_goal(goal_id)
+
+    request_data = request.get_json()
+    task_ids = request_data.get("task_ids")
+
+    if not task_ids:
+        response = {"message": "No task_ids provided"}
+        abort(make_response(response, 400))
+
+    for task_id in task_ids:
+        task = validate_task(task_id)
+        task.goal = goal  
+
+    db.session.commit()
+
+    response_body = {
+        "id": goal.id,
+        "task_ids": task_ids
+    }
+    return response_body, 200
+
+@goals_bp.get("/<goal_id>/tasks")
+def get_tasks_of_goal(goal_id):
+    goal = validate_goal(goal_id)
+    
+    tasks = [{
+        "id": task.id,
+        "goal_id": goal.id,
+        "title": task.title,
+        "description": task.description,
+        "is_complete": task.completed_at is not None
+    } for task in goal.tasks]
+    
+    response_body = {"id": goal.id,
+        "title": goal.title,
+        "tasks": tasks}
+    
+    return response_body, 200
+
